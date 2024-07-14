@@ -39,8 +39,17 @@ final class ChatSession {
   final List<SafetySetting>? _safetySettings;
   final GenerationConfig? _generationConfig;
 
-  ChatSession._(this._generateContent, this._generateContentStream,
-      this._history, this._safetySettings, this._generationConfig);
+  final int _originalHistiorySize;
+  final int? _maxHistorySize;
+
+  ChatSession._(
+      this._generateContent,
+      this._generateContentStream,
+      this._history,
+      this._safetySettings,
+      this._generationConfig,
+      this._maxHistorySize)
+      : _originalHistiorySize = _history.length;
 
   /// The content that has been successfully sent to, or received from, the
   /// generative model.
@@ -72,6 +81,10 @@ final class ChatSession {
         _history.add(message);
         // TODO: Append role?
         _history.add(candidate.content);
+        if (_maxHistorySize != null && _history.length > _maxHistorySize!) {
+          _history.removeRange(_originalHistiorySize,
+              _history.length - _maxHistorySize! + _originalHistiorySize);
+        }
       }
       return response;
     } finally {
@@ -177,8 +190,9 @@ extension StartChatExtension on GenerativeModel {
   /// ```
   ChatSession startChat(
           {List<Content>? history,
+          int? maxHistorySize,
           List<SafetySetting>? safetySettings,
           GenerationConfig? generationConfig}) =>
       ChatSession._(generateContent, generateContentStream, history ?? [],
-          safetySettings, generationConfig);
+          safetySettings, generationConfig, maxHistorySize);
 }
